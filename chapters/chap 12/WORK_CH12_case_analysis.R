@@ -31,3 +31,18 @@ complete_cases_data <- na.omit(data) # Remove missing data
 primary_result <- t.test(outcome ~ treatment, data = complete_cases_data) 
 
 print(primary_result)
+
+
+# Simple imputation with the mean of available outcomes 
+
+mean_outcome <- mean(data$outcome, na.rm = TRUE) 
+
+data$outcome[is.na(data$outcome)] <- mean_outcome 
+
+
+
+# Perform t-test after imputation 
+
+sensitivity_result <- t.test(outcome ~ treatment, data = data) 
+
+print(sensitivity_result) 

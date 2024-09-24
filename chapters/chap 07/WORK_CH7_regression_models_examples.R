@@ -17,12 +17,29 @@ if (!require(lmtest)) {
   install.packages("lmtest")
   library(lmtest)
 }
+# package required for VIF analysis
+if (!require(car)) {
+  install.packages("car")
+  library(car)
+}
 
 # Checking for non-linearity and heteroscedasticity
-plot(model, which=1:2)
+plot(model, which=1:6)
 # Conducting the Breusch-Pagan test
 library(lmtest)
 bptest(model)
+
+# Perform VIF analysis
+vif_results <- vif(model)
+print(vif_results)
+
+# Interpret VIF results
+# VIF > 5 or 10 is often considered problematic
+
+# If multicollinearity is detected, you can mitigate it by:
+# 1. Removing one of the highly correlated variables
+model_reduced <- lm(wages ~ training, data=data)
+summary(model_reduced)
 
 # Poisson Regression in R
 model_poisson <- glm(wages ~ training + experience, family = "poisson", data = data)

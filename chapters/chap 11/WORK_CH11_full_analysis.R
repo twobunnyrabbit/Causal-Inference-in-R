@@ -59,8 +59,8 @@ summary(fit, standardized = TRUE, fit.measures = TRUE)
 # MEDIATION IN THE PRESENCE OF MODERATION
 model_modmed <- '
 # Moderated mediation paths
-CustomerSatisfaction ~ b1*NumberofClaims + b3*GenderNumeric + b4*(NumberofClaims*GenderNumeric)
-IncomeLevel ~ b2*NumberofClaims + b5*GenderNumeric + b6*(NumberofClaims*GenderNumeric)
+CustomerSatisfaction ~ b1*NumberofClaims + b3*GenderNumeric + b4*NumberofClaims:GenderNumeric
+IncomeLevel ~ b2*NumberofClaims + b5*GenderNumeric + b6*NumberofClaims:GenderNumeric
 TerminationBinary ~ c1*CustomerSatisfaction + c2*IncomeLevel + c3*NumberofClaims + c4*GenderNumeric
 '
 

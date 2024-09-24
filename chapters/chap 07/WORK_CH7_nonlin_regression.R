@@ -31,7 +31,7 @@ ggplot(data, aes(x = traffic_level, y = stress_level, color = commute_mode)) +
   
   geom_point(alpha = 0.5) + 
   
-  geom_smooth(method = "loess", formula = y ~ x, size = 1) + 
+  geom_smooth(method = "loess", formula = y ~ x, linewidth = 1) + 
   
   labs(title = "Impact of Traffic Level on Stress Level by Commute Mode", 
        

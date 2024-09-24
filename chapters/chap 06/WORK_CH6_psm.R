@@ -49,7 +49,7 @@ bal.tab <- bal.tab(match_data, un = TRUE)
 print(bal.tab)
 
 # Visualizing balance with Love plot
-love.plot(bal.tab)
+love.plot(bal.tab, stars = "raw")
 
 
 ## 5 ANALYZE TREATMENT EFFECT
@@ -85,10 +85,18 @@ matched_data %>%
   ggplot(aes(x = factor(political_campaign, labels = c("No", "Yes")), y = Average_Vote, fill = factor(political_campaign, labels = c("No", "Yes")))) +
   geom_bar(stat = "identity") +  # Using identity stat for pre-summarized data
   # Adding labels and titles
-  labs(x = "Political Campaign", y = "Average Vote", fill = "Campaign") +
-  # Applying a minimalistic theme
-  theme_minimal()
-
+  labs(x = "Political Campaign", y = "Average Vote", fill = "Campaign",
+       title = "Average Vote by Political Campaign") +
+  # Applying a minimalistic theme with increased text size
+  theme_minimal() +
+  theme(
+    text = element_text(size = 14),  # Increase base text size
+    plot.title = element_text(size = 14, face = "bold"),  # Larger, bold title
+    axis.title = element_text(size = 16),  # Larger axis titles
+    axis.text = element_text(size = 12),  # Larger axis text
+    legend.title = element_text(size = 14),  # Larger legend title
+    legend.text = element_text(size = 12)  # Larger legend text
+  )
 
 
 

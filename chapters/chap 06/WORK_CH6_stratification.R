@@ -6,13 +6,13 @@ set.seed(123) # For reproducibility
 n <- 500 # Number of observations
 
 gssrcc <- data.frame(
-  trump = rbinom(n, 1, 0.5), # Binary treatment indicator
+  outcome = rbinom(n, 1, 0.5), # Binary treatment indicator
   gthsedu = rnorm(n, mean = 12, sd = 2) # A covariate representing education
 )
 
 # Propensity Score Estimation Function (Dummy Example)
 prop.r <- function(data, ids) {
-  ps_model <- glm(trump ~ gthsedu, data = data[ids, ], family = "binomial")
+  ps_model <- glm(outcome ~ gthsedu, data = data[ids, ], family = "binomial")
   e <- predict(ps_model, type = "response")
   return(list(e = e))
 }
@@ -31,7 +31,7 @@ equartiles.r <- function(data = gssrcc, ids = c(1:nrow(gssrcc))) {
   equartiles <- cut(eb, breaks = quartiles, include.lowest = TRUE)
   
   # Estimate the average potential outcome within each quartile
-  out <- glm(trump ~ gthsedu * equartiles - 1 - gthsedu, data = dat)
+  out <- glm(outcome ~ gthsedu * equartiles - 1 - gthsedu, data = dat)
   
   # Extract the estimates for E(Y(0)|qk(e)) and E(Y(1)|qk(e))
   EY0 <- out$coef[1:4]

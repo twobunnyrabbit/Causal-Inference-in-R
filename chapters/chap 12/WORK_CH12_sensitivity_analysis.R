@@ -1,6 +1,3 @@
-# Install and load necessary packages
-if (!requireNamespace("EValue", quietly = TRUE)) install.packages("EValue")
-library(EValue)
 
 # Set seed for reproducibility
 set.seed(123)
