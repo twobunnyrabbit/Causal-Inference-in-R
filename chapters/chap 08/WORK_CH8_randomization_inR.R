@@ -92,11 +92,16 @@ interaction_model <- lm(cars_sold ~ strategy * salesperson_experience, data = sa
 summary(interaction_model)
 
 library(ggplot2)
+
 ggplot(sales_data, aes(x = salesperson_experience, y = cars_sold, color = strategy)) +
-  geom_point() +
-  geom_smooth(method = 'lm') +
-  labs(title = "Interaction Effect of Strategy and Salesperson Experience on Cars Sold",
+  geom_point(size = 3) +
+  geom_smooth(method = 'lm', size = 1.5) +
+  labs(title = "Strategy/Experience on Car Sales",
        x = "Salesperson Experience (years)",
-       y = "Cars Sold")
+       y = "Cars Sold") +
+  theme(text = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        plot.title = element_text(size = 16))
 
 
