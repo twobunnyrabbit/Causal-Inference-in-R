@@ -136,7 +136,7 @@ data_cleaned <- data_cleaned %>%
   filter(sapply(data_cleaned[numeric_covariates], is.finite) %>% rowSums() == length(numeric_covariates))
 
 # run matchit() on data_cleaned
-mod_match <- matchit(catholic ~ race_white + w3income + p5numpla + w3momed_hsb, 
+mod_match <- matchit(catholic ~ w3income + p5numpla + w3momed_hsb, 
                      method = "nearest", data = data_cleaned) # or data_imputed
 
 # Using the MatchIt package for visualization
