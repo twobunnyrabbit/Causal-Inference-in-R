@@ -4,11 +4,12 @@ install.packages("ggplot2")
 # get current work directory
 getwd()
 #set work directory
-setwd("your working dir path string")
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
 
 # Simulating a dataset
 set.seed(123)  # Setting a seed for reproducibility
-foldername = "./CHAP3/data/"
+foldername = "./data/"
 students <- read.table(file = paste(foldername, "student_data.csv"), sep = ",", header = TRUE)
 
 # convert variables to factor

@@ -54,9 +54,18 @@ plot(conf_strengths, bias_factors, type = "l",
      xlab = "Confounder-Outcome Relative Risk", 
      ylab = "E-value", 
      main = "Sensitivity Analysis Plot")
+
+# Calculate a suitable x-position for text
+x_pos <- min(conf_strengths) + (max(conf_strengths) - min(conf_strengths)) * 0.02
+
+# Calculate y-axis offset (adjust this value as needed)
+y_offset <- (max(bias_factors) - min(bias_factors)) * 0.02
+
 abline(h = or, col = "red", lty = 2)
-text(1, or, "Observed OR", pos = 3, col = "red")
+text(x_pos, or + y_offset, "Observed OR", pos = 4, col = "red", adj = 0)
+
 abline(h = evalue_point, col = "blue", lty = 2)
-text(1, evalue_point, "E-value (point estimate)", pos = 3, col = "blue")
+text(x_pos, evalue_point + y_offset, "E-value (point estimate)", pos = 4, col = "blue", adj = 0)
+
 abline(h = evalue_lower, col = "green", lty = 2)
-text(1, evalue_lower, "E-value (lower CI)", pos = 3, col = "green")
+text(x_pos, evalue_lower + y_offset, "E-value (lower CI)", pos = 4, col = "green", adj = 0)
