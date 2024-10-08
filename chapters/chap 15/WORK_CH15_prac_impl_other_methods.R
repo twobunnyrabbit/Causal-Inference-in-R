@@ -52,13 +52,57 @@ pc_dag <- pc.stable(data)
 
 # MMHC algorithm (hybrid)
 mmhc_dag <- mmhc(data)
+# Function to plot a styled DAG
+plot_styled_dag <- function(dag, title) {
+  # Convert bnlearn object to igraph object
+  ig <- bnlearn::as.igraph(dag)
+  
+  # Create a named vector for node labels (example nodes, modify as needed)
+  node_labels <- c("Age", "Education", "Employed", "Income", "Dependents", 
+                   "Domestic Violence", "Region", "Organized Crime",
+                   "Local Unemployment", "Social Services", "Involved")
+  names(node_labels) <- V(ig)$name
+  
+  # Set layout
+  layout <- layout_with_fr(ig)
+  
+  # Set node attributes for better visibility and consistency
+  V(ig)$color <- "lightblue"  # Soft background color for nodes
+  V(ig)$frame.color <- "darkblue"  # Darker border around nodes for contrast
+  V(ig)$size <- 20  # Set node size for better visibility
+  V(ig)$label.color <- "darkblue"  # Use dark color for text to improve contrast
+  V(ig)$label.cex <- 0.75  # Adjust label font size for legibility
+  V(ig)$label.font <- 2  # Make labels bold
+  V(ig)$label.dist <- 2.5  # Move labels below the nodes
+  
+  # Set edge attributes for better visibility
+  E(ig)$color <- "gray30"  # Neutral color for edges
+  E(ig)$arrow.size <- 0.25  # Arrow size for clarity
+  E(ig)$width <- 1.2  # Thicker edges for better visibility
+  
+  # Plot the DAG with improved aesthetics
+  plot(ig, 
+       layout = layout, 
+       vertex.label = node_labels[V(ig)$name], 
+       vertex.label.dist = 2.5,  # Distance of labels from nodes
+       vertex.label.degree = pi / 2,  # Position labels below nodes
+       edge.arrow.mode = 1,  # Use arrows for directed edges
+       main = title,
+       margin = c(0.1, 0.1, 0.1, 0.1))  # Add margins for better spacing
+}
 
-# Visualize the learned DAGs
-pdf("learned_dags.pdf", width = 12, height = 6)  # Save plots to a PDF file
-par(mfrow=c(1,2))
-plot(pc_dag, main="PC Algorithm")
-plot(mmhc_dag, main="MMHC Algorithm")
-dev.off()
+# Apply the function to the PC and MMHC DAGs
+# pdf("learned_dags.pdf", width = 12, height = 6)  # Save plots to a PDF file
+par(mfrow = c(1, 2))  # Plot two graphs side by side
+
+# PC Algorithm (Constraint-based)
+plot_styled_dag(pc_dag, title = "PC Algorithm")
+
+# MMHC Algorithm (Hybrid)
+plot_styled_dag(mmhc_dag, title = "MMHC Algorithm")
+
+
+
 
 # Print the edges of each learned DAG
 cat("PC Algorithm Edges:\n")
@@ -92,14 +136,56 @@ tryCatch({
   cat("\nError in calculating causal effect for MMHC algorithm:", conditionMessage(e), "\n")
 })
 
-# Perform bootstrapping to assess stability of the PC algorithm (as an example)
+
+
+
+# Function to plot a styled bootstrapped DAG
+plot_styled_bootstrap_dag <- function(dag, title, label_cex = 1) {
+  # Convert bnlearn object to igraph object
+  ig <- bnlearn::as.igraph(dag)
+  
+  # Create a named vector for node labels (modify as needed)
+  node_labels <- V(ig)$name
+  
+  # Set layout
+  layout <- layout_with_fr(ig)
+  
+  # Set node attributes for better visibility and consistency
+  V(ig)$color <- "lightblue"  # Soft background color for nodes
+  V(ig)$frame.color <- "darkblue"  # Darker border around nodes for contrast
+  V(ig)$size <- 20  # Set node size for better visibility
+  V(ig)$label.color <- "darkblue"  # Use dark color for text to improve contrast
+  V(ig)$label.cex <- label_cex  # Adjust label font size for legibility
+  V(ig)$label.font <- 2  # Make labels bold
+  V(ig)$label.dist <- 2.5  # Move labels below the nodes
+  
+  # Set edge attributes for better visibility
+  E(ig)$color <- "gray30"  # Neutral color for edges
+  E(ig)$arrow.size <- 0.3  # Arrow size for clarity
+  E(ig)$width <- 1  # Thicker edges for better visibility
+  
+  # Plot the DAG with improved aesthetics
+  plot(ig, 
+       layout = layout, 
+       vertex.label = node_labels, 
+       vertex.label.dist = 2.5,  # Distance of labels from nodes
+       vertex.label.degree = pi / 2,  # Position labels below nodes
+       edge.arrow.mode = 1,  # Use arrows for directed edges
+       main = title,
+       margin = c(0.1, 0.1, 0.1, 0.1))  # Add margins for better spacing
+}
+
+# Perform bootstrapping to assess the stability of the PC algorithm
 boot_pc <- boot.strength(data, R = 200, algorithm = "pc.stable")
 
-# Plot the bootstrapped network
-pdf("bootstrapped_pc_network.pdf", width = 8, height = 8)
+# Get the averaged network from the bootstrap results
 avg_network <- averaged.network(boot_pc)
-plot(avg_network, main = "Bootstrapped PC Network")
-dev.off()
+
+# Save the plot as a PDF and use the custom plotting function
+plot_styled_bootstrap_dag(avg_network, title = "Bootstrapped PC Network", label_cex = 1.2)
+
+
+
 
 cat("\nBootstrapped PC Network Edges (strength > 0.5):\n")
 print(avg_network$arcs[avg_network$strength > 0.5, ])

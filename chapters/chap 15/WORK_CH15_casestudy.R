@@ -50,19 +50,54 @@ hc_result_more_bins <- hc(data_discrete_more_bins)
 print(arcs(hc_result_more_bins))
 
 
-#visualize causal relation
-plot_graph <- function(graph, title) {
-  if(length(arcs(graph)) > 0) {
-    plot(graph, main = title)
+
+# Function to plot a styled DAG with improved legibility
+plot_graph <- function(graph, title, label_cex = 1) {
+  if (length(arcs(graph)) > 0) {
+    # Convert bnlearn object to igraph object
+    ig <- bnlearn::as.igraph(graph)
+    
+    # Create a named vector for node labels (modify as needed)
+    node_labels <- V(ig)$name
+    
+    # Set layout
+    layout <- layout_with_fr(ig)
+    
+    # Set node attributes for better visibility and consistency
+    V(ig)$color <- "lightblue"  # Soft background color for nodes
+    V(ig)$frame.color <- "darkblue"  # Darker border around nodes for contrast
+    V(ig)$size <- 15  # Set node size for better visibility
+    V(ig)$label.color <- "darkblue"  # Use dark color for text to improve contrast
+    V(ig)$label.cex <- label_cex  # Adjust label font size for legibility
+    V(ig)$label.font <- 2  # Make labels bold
+    V(ig)$label.dist <- 2.5  # Move labels below the nodes
+    
+    # Set edge attributes for better visibility
+    E(ig)$color <- "gray30"  # Neutral color for edges
+    E(ig)$arrow.size <- 0.1  # Arrow size for clarity
+    E(ig)$width <- 1  # Thicker edges for better visibility
+    
+    # Plot the DAG with improved aesthetics
+    plot(ig, 
+         layout = layout, 
+         vertex.label = node_labels, 
+         vertex.label.dist = 2.5,  # Distance of labels from nodes
+         vertex.label.degree = pi / 2,  # Position labels below nodes
+         edge.arrow.mode = 1,  # Use arrows for directed edges
+         main = title,
+         margin = c(0.1, 0.1, 0.1, 0.1))  # Add margins for better spacing
   } else {
     cat("No edges to plot for", title, "\n")
   }
 }
 
-par(mfrow = c(1, 1))
-plot_graph(mixed_hc_result, "Hill-Climbing (Mixed Data)")
-plot_graph(hc_result_more_bins, "Hill-Climbing (More Bins)")
-plot_graph(si_hiton_pc_result, "Semi-Interleaved HITON-PC")
+# Plot the graphs with consistent styling
+par(mfrow = c(1, 3))  # Adjust layout for multiple plots in one row
+
+# Plot each graph with the improved style and title
+plot_graph(mixed_hc_result, "Hill-Climbing (Mixed Data)", label_cex = 1.2)
+plot_graph(hc_result_more_bins, "Hill-Climbing (More Bins)", label_cex = 1.2)
+plot_graph(si_hiton_pc_result, "Semi-Interleaved HITON-PC", label_cex = 1.2)
 
 
 ##check edges

@@ -1,11 +1,13 @@
 
-setwd("path to your work directory")
 
 library(dagitty)
 library(lavaan)
 
 # load the data set
+setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 social_media_data = read.csv("./data/social_media_data.csv")
+
+
 
 # Define the causal graph
 graph <- dagitty("dag {
@@ -19,8 +21,8 @@ graph <- dagitty("dag {
   hours_active_perday -> num_post_commented
 }")
 
-# Plot the graph
-plot(graph)
+plot(graph, cex = 4.5)  
+
 
 # Prepare the data for analysis
 vars_in_model <- c("userA_numfollowers", "userA_numposts", "interests", "hours_active_perday", "num_post_likes", "num_post_commented")

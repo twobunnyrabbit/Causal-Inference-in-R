@@ -41,12 +41,55 @@ data$involved <- rbinom(n, 1, prob_involvement)
 # Convert all variables to factors (categorical) for bnlearn
 data[] <- lapply(data, factor)
 
+
+
+
+# Plot Bayesian Network with improved styling
+plot_bn <- function(bn) {
+  # Convert bnlearn object to igraph object
+  ig <- bnlearn::as.igraph(bn)
+
+  
+  # Create a named vector for node labels (using the node names from the Bayesian Network)
+  node_labels <- c("Age", "Education", "Employed", "Income", "Dependents", 
+                   "Domestic Violence", "Region", "Organized Crime",
+                   "Local Unemployment", "Social Services", "Involved")
+  names(node_labels) <- V(ig)$name
+  
+  # Set layout
+  layout <- layout_with_fr(ig)
+  
+  # Set node attributes for better visibility and consistency
+  V(ig)$color <- "lightblue"  # Soft background color for nodes
+  V(ig)$frame.color <- "darkblue"  # Darker border around nodes for contrast
+  V(ig)$size <- 20  # Set node size for better visibility
+  V(ig)$label.color <- "darkblue"  # Use dark color for text to improve contrast
+  V(ig)$label.cex <- 1  # Adjust label font size
+  V(ig)$label.font <- 2  # Make labels bold
+  V(ig)$label.dist <- 2.5  # Move labels below the nodes
+  
+  # Set edge attributes for better visibility
+  E(ig)$color <- "gray30"  # Neutral color for edges
+  E(ig)$arrow.size <- 0.5  # Arrow size for clarity
+  E(ig)$width <- 2  # Thicker edges for visibility
+  
+  # Plot the Bayesian Network with improved aesthetics
+  plot(ig, 
+       layout = layout, 
+       vertex.label = node_labels[V(ig)$name], 
+       vertex.label.dist = 2.5,  # Distance of labels from nodes
+       vertex.label.degree = pi / 2,  # Position labels below nodes
+       edge.arrow.mode = 1,  # Use arrows for directed edges
+       main = "Bayesian Network: Women's Involvement in Drug Trafficking",
+       sub = "Learned using Hill-Climbing Algorithm",
+       margin = c(0.1, 0.1, 0.1, 0.1))  # Add margins for better spacing
+}
+
 # Learn the structure of the Bayesian Network
 bn <- hc(data)
 
-# Plot the Bayesian Network
-par(mfrow=c(1,1))
-plot(bn, main="Bayesian Network: Women's Involvement in Drug Trafficking")
+# Call the function to plot the Bayesian Network
+plot_bn(bn)
 
 # Print summary of the Bayesian Network
 print("Summary of the Bayesian Network:")
