@@ -61,10 +61,10 @@ est_ate <- mean(tau_hat_est)
 ate_bias <- est_ate - true_ate
 print(paste("Average Treatment Effect (ATE) Bias:", ate_bias))
 
-# Calculate the CATE accuracy
+# Calculate the CATE accuracy using RMSE
 true_cate <- 2 + 0.5 * X[est_indices, 1]  # True CATE based on the data generation process
-cate_mse <- mean((tau_hat_est - true_cate)^2)
-print(paste("Conditional Average Treatment Effect (CATE) MSE:", cate_mse))
+cate_rmse <- sqrt(mean((tau_hat_est - true_cate)^2))
+print(paste("Conditional Average Treatment Effect (CATE) RMSE:", cate_rmse))
 
 # Construct confidence intervals and evaluate coverage
 alpha <- 0.05
