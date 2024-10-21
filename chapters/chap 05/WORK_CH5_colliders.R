@@ -1,6 +1,6 @@
 
 
-set.seed(99) # For reproducibility
+set.seed(100) # For reproducibility
 n <- 3000 # Number of families
 
 # Generating independent variables
@@ -21,7 +21,7 @@ cor.test(data$Income_Level, data$Frugality) # will give a number between 0 and 1
 library(dplyr)
 
 moderate_spenders <- data %>% 
-  filter(Amount_Spent > quantile(Amount_Spent, 0.4) & Amount_Spent < quantile(Amount_Spent, 0.6))
+  filter(Amount_Spent > quantile(Amount_Spent, 0.2) & Amount_Spent < quantile(Amount_Spent, 0.6))
 
 cor.test(moderate_spenders$Income_Level, moderate_spenders$Frugality)
 

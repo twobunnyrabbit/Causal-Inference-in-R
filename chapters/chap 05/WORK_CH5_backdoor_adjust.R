@@ -72,12 +72,19 @@ library(ggplot2)
 library(broom)
 
 # Coefficient plot for gender
-coef_df <- broom::tidy(model) %>% filter(term == "genderFemale" | term == "genderMale")
+coef_df <- broom::tidy(model) %>% filter(term == "gender_factorMale")
+
+
 ggplot(coef_df, aes(x = term, y = estimate)) +
   geom_point() +
   geom_errorbar(aes(ymin = estimate - std.error, ymax = estimate + std.error), width = 0.1) +
   ylab("Adjusted Effect of Gender on Remuneration") +
   xlab("Gender")
+print(coef_df)
+print(broom::tidy(model)$term)
+print(table(corp_data$gender_factor))
+
+
 
 # Residuals plot
 ggplot(data = model, aes(x = .fitted, y = .resid)) +

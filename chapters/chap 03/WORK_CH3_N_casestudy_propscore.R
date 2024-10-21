@@ -140,7 +140,7 @@ mod_match <- matchit(catholic ~ w3income + p5numpla + w3momed_hsb,
                      method = "nearest", data = data_cleaned) # or data_imputed
 
 # Using the MatchIt package for visualization
-plot(mod_match, type = "jitter")
+#plot(mod_match, type = "jitter")
 plot(mod_match, type = "hist")
 
 matched_data <- match.data(mod_match)
