@@ -67,6 +67,10 @@ print(robust_summary)
 # ADVANCED DOUBLY ROBUST ESTIMATION USING TMLE
 # Define the list of candidate learners
 
+# Define the list of candidate learners for SuperLearner
+#SL.library <- c("SL.glm", "SL.randomForest", "SL.gbm") # slower
+SL.library <- c("SL.glm", "SL.randomForest") # Removed SL.gbm for speed
+
 # Applying TMLE for causal effect estimation
 tmle_result <- tmle(Y = data$sales, 
                     A = data$packaging, 
