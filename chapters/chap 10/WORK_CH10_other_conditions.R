@@ -12,8 +12,12 @@ Y <- 2 * T + rnorm(n, mean=0, sd=1) # Outcome variable: Y, influenced by T
 # Combine into a data frame
 data <- data.frame(Z, T, Y)
 
-first_stage <- ivreg(T ~ Z | Z, data=data)
+#first_stage <- ivreg(T ~ Z | Z, data=data)
 summary(first_stage)$fstatistic
+
+# First stage regression using lm
+first_stage_lm <- lm(T ~ Z, data=data)
+summary(first_stage_lm)$fstatistic
 
 
 # EXOGENEITY CONDITION
