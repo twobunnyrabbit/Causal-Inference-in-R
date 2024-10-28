@@ -1,0 +1,24 @@
+
+Call:
+lm(formula = grade_improvement ~ noise_level_pre + noise_level_post + 
+    study_hours + part_time_job + family_income, data = students)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-33.527 -10.923  -1.533  10.857  32.074 
+
+Coefficients:
+                           Estimate Std. Error t value Pr(>|t|)  
+(Intercept)               1.123e+01  9.600e+00   1.170   0.2449  
+noise_level_preModerate   1.347e+00  3.287e+00   0.410   0.6829  
+noise_level_postModerate -2.722e+00  3.280e+00  -0.830   0.4086  
+study_hours              -1.750e+00  8.610e-01  -2.033   0.0449 *
+part_time_jobYes          4.687e+00  3.217e+00   1.457   0.1485  
+family_income            -6.338e-05  1.591e-04  -0.398   0.6913  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 15.97 on 94 degrees of freedom
+Multiple R-squared:  0.07643,	Adjusted R-squared:  0.0273 
+F-statistic: 1.556 on 5 and 94 DF,  p-value: 0.1803
+
