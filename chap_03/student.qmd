@@ -1,0 +1,180 @@
+---
+title: "Student Data Analysis"
+author: "Your Name"
+date: "`r Sys.Date()`"
+format: html
+---
+
+```{r}
+# Your R code will go here
+library(here)
+library(tidyverse)
+df <- read_csv(here('./chap_03/data/ student_data.csv'))
+```
+
+```{r}
+# View the data structure
+df |> 
+    View()
+```
+
+Determine if there are any missing data in each of the variables.
+
+```{r}
+# Count missing values in each column
+missing_counts <- df |> 
+    map_dbl(~sum(is.na(.)))
+
+# Display the missing value counts
+print(missing_counts)
+```
+
+```{r}
+# Alternative approach with a more informative output
+missing_summary <- df |> 
+    summarise(across(everything(), ~sum(is.na(.)))) |> 
+    pivot_longer(everything(), names_to = "variable", values_to = "missing_count")
+
+# Display the missing value summary
+print(missing_summary)
+```
+
+```{r}
+# Visualize missing values
+# library(ggplot2)
+
+missing_summary |> 
+    ggplot(aes(x = reorder(variable, -missing_count), y = missing_count)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    theme_minimal() +
+    labs(title = "Missing Values by Variable",
+         x = "Variable",
+         y = "Number of Missing Values") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Next, we convert several variables—noise_level_pre, noise_level_post, and part_time_job—into factors to properly represent categorical data. 
+
+```{r}
+df <- df |> 
+    mutate(across(c(noise_level_pre, noise_level_post, part_time_job), ~as.factor(.))) 
+```
+
+Finally, we calculate a new variable, grade_improvement, by subtracting the pre-move grade from the post-move grade.
+
+
+```{r}
+df <- df |> 
+    mutate(grade_improvement = post_move_grade - pre_move_grade)
+```
+
+Examine pre move variables
+
+```{r}
+df |> 
+    select(contains("pre")) |> 
+    names()
+```
+
+Pre-move variables are `pre_move_grade` and `noise_level_pre`
+
+```{r}
+df |> 
+    ggplot(aes(x=noise_level_pre, y=pre_move_grade)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2, alpha=0.3) +
+    theme_bw() +
+    labs(title = "Pre move grade vs pre move noise level",
+    x = "Pre move noise level", y = "Pre move grade")
+```
+
+Examine relationship between hours studied and grade improvement
+
+
+```{r}
+df |> 
+    ggplot(aes(x=study_hours, y=grade_improvement)) +
+    geom_point() +
+    geom_smooth(method="lm", se=FALSE) +
+    theme_minimal() +
+    labs(title = "Hours studied vs Grade Improvement",
+    x = "Hours studied", y = "Grade improvement")
+```
+
+
+```{r}
+df |> 
+    summarise(mean=mean(pre_move_grade), sd=sd(pre_move_grade), .by=noise_level_pre)
+```
+
+## Correlation Analysis
+
+```{r}
+# Install and load required packages
+if (!require("corrplot")) install.packages("corrplot")
+library(corrplot)
+
+# Identify numeric variables in the dataset
+numeric_vars <- df |> 
+    select(where(is.numeric)) |> 
+    names()
+
+print("Numeric variables in the dataset:")
+print(numeric_vars)
+```
+
+```{r}
+# Calculate correlation matrix
+cor_matrix <- df |> 
+    select(where(is.numeric)) |> 
+    cor(use = "complete.obs", method = "pearson")
+
+print("Correlation Matrix:")
+print(round(cor_matrix, 2))
+```
+
+```{r}
+# Create correlation heatmap
+corrplot(cor_matrix, 
+         method = "color", 
+         type = "upper", 
+         tl.col = "black", 
+         tl.srt = 45,
+         addCoef.col = "black",
+         number.cex = 0.7,
+         title = "Correlation Matrix Heatmap",
+         mar = c(0,0,1,0))
+```
+
+```{r}
+# Alternative visualization with ggplot2
+library(reshape2)
+
+cor_melted <- melt(cor_matrix)
+
+ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
+    geom_tile() +
+    geom_text(aes(label = round(value, 2)), color = "black", size = 3) +
+    scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                         midpoint = 0, limit = c(-1, 1)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          panel.grid = element_blank()) +
+    labs(title = "Correlation Matrix Heatmap",
+         x = "",
+         y = "",
+         fill = "Correlation")
+```
+
+```{r}
+# Scatterplot matrix for key variables
+library(GGally)
+
+# Select key numeric variables for scatterplot matrix
+key_vars <- c("pre_move_grade", "post_move_grade", "study_hours", "grade_improvement2")
+
+ggpairs(df[, key_vars], 
+        upper = list(continuous = wrap("cor", size = 4)),
+        lower = list(continuous = wrap("points", alpha = 0.3, size = 0.5)),
+        diag = list(continuous = wrap("densityDiag", alpha = 0.5)),
+        title = "Scatterplot Matrix of Key Variables")
