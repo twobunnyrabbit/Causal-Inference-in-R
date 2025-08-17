@@ -1,0 +1,41 @@
+---
+title: "Chapter 3 - Catholic Schools vs Public"
+format: html
+self-contained: true
+---
+
+
+```{r}
+library(here)
+library(tidyverse)
+
+df <- read_csv(here('./chap_03/data/ecls.csv'))
+```
+
+
+```{r}
+df |>
+    summarise(across(everything(), ~mean(is.na(.)))) |> 
+    pivot_longer(cols=everything(), names_to = "variable", values_to = "pct_missing") |> 
+    filter(pct_missing > 0) |> 
+    arrange(desc(pct_missing))
+```
+
+
+Removed `childid`
+```{r}
+df <- df |> 
+    select(-childid)
+```
+
+
+```{r}
+df |> 
+    na.omit() |> 
+    nrow()
+```
+
+
+```{r}
+df |> head()
+```
