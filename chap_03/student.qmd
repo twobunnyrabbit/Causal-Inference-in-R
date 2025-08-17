@@ -358,16 +358,11 @@ m.out <- matchit(noise_level_post ~ study_hours +
                    part_time_job + family_income,
                  method = "nearest", data = df)
 matched_data <- match.data(m.out)  # Getting the matched dataset
-matched_data |> View()
+# matched_data |> View()
 ```
 
 
-```{r}
-df |> 
-    select(contains("noise"), grade_improvement)
-```
-
-**Individual cases:** You can examine how individual students’ grades changed after moving. For example, a student with a significant increase in grade_improvement after moving to a Low noise level post-move might suggest a beneficial effect of a quieter environment. For instance, Student 1, who remained in a Moderate noise level, showed a grade improvement of 12.496 points. Student 3, moving from a Moderate to Low noise level, shows a smaller improvement
+**Individual cases:** You can examine how individual students' grades changed after moving. For example, a student with a significant increase in grade_improvement after moving to a Low noise level post-move might suggest a beneficial effect of a quieter environment. For instance, Student 1, who remained in a Moderate noise level, showed a grade improvement of 12.496 points. Student 3, moving from a Moderate to Low noise level, shows a smaller improvement
 
 ```{r}
 df |> 
@@ -386,3 +381,111 @@ df |>
     facet_wrap(~noise_level_pre)
 ```
 
+## Interpreting MatchIt Output: Distance, Weights, and Subclass
+
+The MatchIt procedure produces several important columns that help us understand the matching process:
+
+### Key Columns Explained:
+
+1. **Distance**: The propensity score (estimated probability of being in "High" noise level group given covariates)
+2. **Weights**: Sampling weights that adjust for treatment assignment probability (1 = successfully matched, 0 = not matched)
+3. **Subclass**: Indicates which matched pair/group each observation belongs to
+
+### Visualizations for Better Understanding
+
+```{r}
+# Load necessary packages for visualization
+library(ggplot2)
+library(dplyr)
+library(cobalt)
+```
+
+```{r}
+# 1. Propensity Score Distribution Plot
+matched_data %>%
+  mutate(noise_level_post = as.factor(noise_level_post)) %>%
+  ggplot(aes(x = distance, fill = noise_level_post)) +
+  geom_density(alpha = 0.6) +
+  theme_minimal() +
+  labs(title = "Propensity Score Distribution by Post-Move Noise Level",
+       x = "Propensity Score (Distance)",
+       y = "Density",
+       fill = "Post-Move Noise Level") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+This plot shows how well the treatment and control groups overlap in their propensity scores. Good overlap indicates that matching was successful.
+
+```{r}
+# 2. Matching Visualization - Show matched pairs by subclass
+matched_data %>%
+  group_by(subclass) %>%
+  summarise(
+    treated = sum(noise_level_post == "High", na.rm = TRUE),
+    control = sum(noise_level_post == "Low", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = factor(subclass), y = treated, fill = "Treated")) +
+  geom_col(position = "dodge") +
+  geom_col(aes(y = control, fill = "Control"), position = "dodge") +
+  theme_minimal() +
+  labs(title = "Matched Pairs by Subclass",
+       x = "Subclass",
+       y = "Number of Students",
+       fill = "Group") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+```
+
+This visualization shows the structure of your matched pairs. Each subclass represents a matched group containing both treated and control students.
+
+```{r}
+# 3. Weight Distribution Plot
+matched_data %>%
+  ggplot(aes(x = weights, fill = noise_level_post)) +
+  geom_histogram(bins = 20, alpha = 0.7, position = "identity") +
+  theme_minimal() +
+  labs(title = "Distribution of Matching Weights",
+       x = "Weights",
+       y = "Frequency",
+       fill = "Post-Move Noise Level") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+Since all your weights are 1, this confirms that all observations were successfully matched in the nearest neighbor matching process.
+
+```{r}
+# 4. Balance Assessment Plot
+# Check balance before and after matching
+bal <- bal.tab(m.out, stats = c("mean.diffs", "variance.ratios"))
+love.plot(bal, stars = "raw", main = "Balance Assessment Before and After Matching")
+```
+
+This Love plot is crucial for assessing whether matching successfully balanced the covariates between treatment and control groups. Smaller differences (closer to 0) indicate better balance.
+
+```{r}
+# 5. Distance vs. Outcome Plot
+matched_data %>%
+  ggplot(aes(x = distance, y = grade_improvement, color = noise_level_post)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal() +
+  labs(title = "Propensity Score vs. Grade Improvement",
+       x = "Propensity Score (Distance)",
+       y = "Grade Improvement",
+       color = "Post-Move Noise Level") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+This plot helps you see if there's any relationship between the propensity score and the outcome variable, which can indicate potential issues with the matching or model specification.
+
+### Summary of Matching Results
+
+Based on the visualizations above, you can assess:
+
+1. **Overlap**: How well do the propensity score distributions overlap between groups?
+2. **Balance**: Did matching successfully balance the covariates?
+3. **Structure**: How many matched pairs do you have, and what's their composition?
+4. **Weight distribution**: Are all observations properly weighted?
+
+These visualizations make the abstract concepts of distance, weights, and subclass more concrete and interpretable.
