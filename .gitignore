@@ -1,0 +1,74 @@
+# R specific
+.Rproj.user
+.Rhistory
+.RData
+*.RData
+*.rds
+*.Rds
+
+# Quarto output
+*.html
+*.pdf
+*.docx
+*.odt
+*.pptx
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.json
+*.xml
+*.tex
+*.fdb_latexmk
+*.fls
+*.aux
+*.log
+*.toc
+*.out
+*.synctex.gz
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.html
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Project specific
+chap_03/data/
+chap_04/data/
+chap_05/data/
+chap_06/data/
+chap_07/data/
+chap_08/data/
+chap_09/data/
+chap_10/data/
+chap_11/data/
+chap_12/data/
+chap_13/data/
+chap_14/data/
+chap_15/data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp

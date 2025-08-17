@@ -3,6 +3,7 @@ title: "Student Data Analysis"
 author: "Your Name"
 date: "`r Sys.Date()`"
 format: html
+self-contained: true
 ---
 
 ```{r}
@@ -171,10 +172,217 @@ ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
 library(GGally)
 
 # Select key numeric variables for scatterplot matrix
-key_vars <- c("pre_move_grade", "post_move_grade", "study_hours", "grade_improvement2")
+key_vars <- c("pre_move_grade", "post_move_grade", "study_hours", "grade_improvement")
 
 ggpairs(df[, key_vars], 
         upper = list(continuous = wrap("cor", size = 4)),
         lower = list(continuous = wrap("points", alpha = 0.3, size = 0.5)),
         diag = list(continuous = wrap("densityDiag", alpha = 0.5)),
         title = "Scatterplot Matrix of Key Variables")
+```
+
+## Simple Causal Inference
+
+```{r}
+t.test(df$pre_move_grade, df$post_move_grade, paired = TRUE)
+```
+
+::: {.callout-note}
+## Paired t-test Interpretation (gpt5-mini)
+
+**Brief interpretation**
+
+- Test: paired t-test on 100 paired observations (df = 99).
+- Result: t = -0.387, p = 0.6996. Because p > 0.05, you fail to reject the null hypothesis that the mean difference = 0. There is no evidence of a statistically significant difference between the paired measurements.
+- Estimate: the observed mean difference = -0.6266 (on average the first measurement is 0.6266 units lower than the second).
+- Confidence interval: 95% CI = [−3.840, 2.587]. This interval includes 0, consistent with the non-significant p-value; the true mean difference could plausibly be anywhere in that range.
+
+**Notes/implications**
+- "Failing to reject" is not proof of no difference. If you need to demonstrate practical equivalence, use an equivalence (TOST) procedure or ensure adequate power/smaller CI width.
+- The paired t-test assumes the pairwise differences are approximately normally distributed; check this assumption (e.g., histogram, QQ-plot, Shapiro–Wilk) if unsure.
+:::
+
+
+```{r}
+df |> 
+    ggplot(aes(x=grade_improvement)) +
+    geom_density() +
+    theme_minimal()
+```
+
+
+```{r}
+shapiro.test(df$grade_improvement)
+```
+
+::: {.callout-note}
+## Shapiro-Wilk test interpretation (gpt5-mini)
+Brief answer
+- Null hypothesis (H0): the data are drawn from a normal distribution.
+- Result: W = 0.97826, p = 0.09715.
+- Interpretation at the common α = 0.05: p > 0.05, so you fail to reject H0 — there is no strong evidence the data deviate from normality (i.e., the data are consistent with normality).
+- Note: at α = 0.10 the result is borderline (p ≈ 0.097), so some might treat it as marginal evidence against normality.
+
+Extra context and advice
+- The W statistic ranges 0–1; values closer to 1 indicate closer agreement with a normal distribution. W = 0.978 is fairly close to 1.
+- "Fail to reject" does not prove normality; it only means the test did not find significant departure given your sample size.
+- Shapiro-Wilk is sensitive to sample size: with very large samples tiny departures can be significant; with small samples the test may lack power to detect departures.
+- Recommended checks: plot a Q–Q plot and a histogram, compute skewness/kurtosis, and consider robustness or transformations if the analysis is sensitive to normality.
+:::
+
+## Linear Regression Analysis
+
+```{r}
+# Fit the linear regression model
+lm_model <- lm(grade_improvement ~ noise_level_pre + noise_level_post + 
+               study_hours + part_time_job + family_income, data = df)
+
+# Display the model summary
+summary(lm_model)
+```
+
+```{r}
+# Visual interpretation of regression results
+# 1. Residual plots for model assumptions
+par(mfrow = c(2, 2))
+plot(lm_model, which = 1:4)
+par(mfrow = c(1, 1))
+```
+
+```{r}
+# 2. Coefficient plot with confidence intervals
+library(broom)
+library(ggplot2)
+
+# Extract coefficients and confidence intervals
+coef_data <- tidy(lm_model, conf.int = TRUE) |> 
+    filter(term != "(Intercept)")
+
+# Create coefficient plot
+ggplot(coef_data, aes(x = reorder(term, estimate), y = estimate, ymin = conf.low, ymax = conf.high)) +
+    geom_pointrange(color = "blue", size = 0.7) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+    coord_flip() +
+    theme_minimal() +
+    labs(title = "Regression Coefficients with 95% Confidence Intervals",
+         x = "Predictor Variables",
+         y = "Coefficient Estimate") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+# 3. Check for influential observations
+influence_data <- influence.measures(lm_model)
+
+# Cook's distance plot
+plot(lm_model, which = 4, main = "Cook's Distance")
+```
+
+```{r}
+# 4. Check multicollinearity
+library(car)
+
+# Calculate VIF (Variance Inflation Factor)
+vif_results <- vif(lm_model)
+print("Variance Inflation Factors (VIF):")
+print(vif_results)
+
+# Check correlation between predictors
+predictor_cor <- cor(df |> 
+                        select(where(is.numeric), -grade_improvement))
+print("Correlation matrix of predictors:")
+print(round(predictor_cor, 2))
+```
+
+::: {.callout-warning}
+## Linear Regression Model Interpretation
+
+**Model Overview**
+- Dependent variable: `grade_improvement` (post_move_grade - pre_move_grade)
+- Predictors: noise levels (pre/post), study hours, part-time job status, family income
+- Sample size: 100 observations
+
+**Overall Model Fit**
+- **R-squared**: 0.076 (7.6%) - The model explains only 7.6% of the variance in grade improvement
+- **Adjusted R-squared**: 0.027 (2.7%) - Very low explanatory power even after adjusting for predictors
+- **F-statistic**: 1.556 (p = 0.180) - Overall model is not statistically significant
+- **Residual standard error**: 15.97 - Typical prediction error is about 16 points
+
+**Key Findings**
+
+**Statistically Significant Predictor:**
+- **study_hours**: -1.75 (p = 0.045) - For each additional hour of study, grade improvement decreases by 1.75 points, on average. This counterintuitive result warrants investigation.
+
+**Non-Significant Predictors:**
+- `noise_level_preModerate`: p = 0.683 (no significant effect)
+- `noise_level_postModerate`: p = 0.409 (no significant effect)  
+- `part_time_jobYes`: p = 0.149 (marginally non-significant)
+- `family_income`: p = 0.691 (no significant effect)
+
+**Model Assumption Checks**
+
+**Residual Analysis:**
+- Residuals show reasonable distribution but with some potential outliers
+- Q-Q plot suggests minor deviations from normality
+- Scale-Location plot indicates potential heteroscedasticity
+
+**Multicollinearity:**
+- VIF values are all < 2, indicating no problematic multicollinearity
+- Predictor correlations are generally low
+
+**Influential Observations:**
+- Cook's distance values are mostly < 0.5, suggesting no highly influential points
+- A few observations may warrant closer examination
+
+**Practical Implications**
+1. **Limited Explanatory Power**: The model has very low predictive capability, suggesting other important factors influence grade improvement that are not captured in this model.
+
+2. **Counterintuitive Finding**: The negative relationship between study hours and grade improvement is unexpected and may indicate:
+   - Data quality issues
+   - Omitted variable bias (e.g., motivation, prior academic preparation)
+   - Measurement error in study hours
+   - Non-linear relationships not captured by the model
+
+3. **Recommendations**:
+   - Consider additional relevant predictors (e.g., student motivation, teaching quality, course difficulty)
+   - Explore non-linear relationships and interactions
+   - Investigate data collection methods for study hours
+   - Consider robust regression methods if outliers are problematic
+:::
+
+## Using Propensity Score Matching
+
+```{r}
+library(MatchIt)
+m.out <- matchit(noise_level_post ~ study_hours +
+                   part_time_job + family_income,
+                 method = "nearest", data = df)
+matched_data <- match.data(m.out)  # Getting the matched dataset
+matched_data |> View()
+```
+
+
+```{r}
+df |> 
+    select(contains("noise"), grade_improvement)
+```
+
+**Individual cases:** You can examine how individual students’ grades changed after moving. For example, a student with a significant increase in grade_improvement after moving to a Low noise level post-move might suggest a beneficial effect of a quieter environment. For instance, Student 1, who remained in a Moderate noise level, showed a grade improvement of 12.496 points. Student 3, moving from a Moderate to Low noise level, shows a smaller improvement
+
+```{r}
+df |> 
+    select(contains("noise"), contains("grade")) |> 
+    mutate(pct_change = if_else( pre_move_grade - post_move_grade == 0, 0, round(grade_improvement/pre_move_grade, 2))) |> 
+    group_by(noise_level_pre, noise_level_post) |> 
+    summarise(mean_pct_change=mean(pct_change))
+```
+
+```{r}
+df |> 
+    select(contains("noise"), contains("grade")) |> 
+    mutate(pct_change = if_else( pre_move_grade - post_move_grade == 0, 0, round(grade_improvement/pre_move_grade, 2))) |> 
+    ggplot(aes(x=noise_level_post, y = pct_change)) +
+    geom_boxplot() +
+    facet_wrap(~noise_level_pre)
+```
+
