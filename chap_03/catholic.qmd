@@ -4,7 +4,6 @@ format: html
 self-contained: true
 ---
 
-
 ```{r}
 library(here)
 library(tidyverse)
@@ -15,27 +14,431 @@ df <- read_csv(here('./chap_03/data/ecls.csv'))
 
 ```{r}
 df |>
-    summarise(across(everything(), ~mean(is.na(.)))) |> 
-    pivot_longer(cols=everything(), names_to = "variable", values_to = "pct_missing") |> 
-    filter(pct_missing > 0) |> 
-    arrange(desc(pct_missing))
+  summarise(across(everything(), ~ mean(is.na(.)))) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "pct_missing"
+  ) |>
+  filter(pct_missing > 0) |>
+  arrange(desc(pct_missing))
 ```
 
 
 Removed `childid`
 ```{r}
-df <- df |> 
-    select(-childid)
+df <- df |>
+  select(-childid)
 ```
 
 
 ```{r}
-df |> 
-    na.omit() |> 
-    nrow()
+df |>
+  na.omit() |>
+  nrow()
 ```
 
 
 ```{r}
 df |> head()
 ```
+
+Calculate summary statistics (mean, standard deviation, minimum, and maximum) for all numeric columns in our dataset, ignoring any missing values. Finally, we count the occurrences of different categories in the catholic column using the table function. 
+
+
+```{r}
+df |>
+  reframe(across(
+    where(is.numeric),
+    ~ list(
+      mean = mean(.x, na.rm = TRUE),
+      sd = sd(.x, na.rm = TRUE),
+      median = median(.x, na.rm = TRUE),
+      mad = mad(.x, na.rm = TRUE)
+    )
+  ))
+```
+
+## Transform Wide Summary Statistics to Long Format
+
+```{r}
+# Transform the wide format summary statistics to long format
+summary_long <- df |>
+  reframe(across(
+    where(is.numeric),
+    ~ list(
+      mean = mean(.x, na.rm = TRUE),
+      sd = sd(.x, na.rm = TRUE),
+      median = median(.x, na.rm = TRUE),
+      mad = mad(.x, na.rm = TRUE)
+    )
+  )) |>
+  unnest(everything()) |>
+  mutate(stats = c("mean", "sd", "median", "mad"), .before = 1) |>
+  pivot_longer(
+    cols = -stats,
+    names_to = "vars",
+    values_to = "value"
+  )
+
+# Display the transformed data
+summary_long
+```
+
+```{r}
+# Examine the structure of the transformed data
+glimpse(summary_long)
+```
+
+```{r}
+# Get unique variables and statistics
+cat("Unique variables:\n")
+print(unique(summary_long$vars))
+
+cat("\nUnique statistics:\n")
+print(unique(summary_long$stats))
+```
+
+```{r}
+# Reshape to wide format by variable (alternative view)
+summary_wide_by_var <- summary_long |>
+  pivot_wider(
+    names_from = stats,
+    values_from = value
+  )
+
+summary_wide_by_var
+```
+
+```{r}
+# Filter for specific variable to show the transformation clearly
+catholic_summary <- summary_long |>
+  filter(vars == "catholic")
+
+cat("Summary statistics for 'catholic' variable:\n")
+print(catholic_summary)
+```
+
+The transformation has successfully converted the wide format summary statistics to a long format where:
+- `vars` column contains the original variable names
+- `stats` column contains the statistic types (mean, sd, median, mad)
+- `value` column contains the corresponding statistic values
+
+This format is more suitable for:
+- Visualization with ggplot2
+- Further data manipulation
+- Statistical analysis by variable
+- Creating summary tables
+
+
+```{r}
+df |>
+  group_by(catholic) |>
+  tally() |>
+  mutate(prop = round(n / sum(n), 3))
+```
+
+Create histograms for four numeric variables: mother's age, father's age, household income, and child's math score. 
+
+```{r}
+# Create histograms with density overlay for selected variables
+df |>
+  select(contains('age'), w3income, c5r2mtsc) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "value"
+  ) |>
+  ggplot(aes(x = value, fill = variable)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 30,
+    alpha = 0.7,
+    position = "identity"
+  ) +
+  geom_density(alpha = 0.5, linewidth = 1, adjust = 1.5) +
+  theme_minimal() +
+  facet_wrap(~variable, scales = "free") +
+  labs(
+    title = "Distribution of Age, Income, and Math Scores with Density Overlay",
+    x = "Value",
+    y = "Density"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5), legend.position = "none")
+```
+
+```{r}
+# Alternative version with different styling
+df |>
+  select(contains('age'), w3income, c5r2mtsc) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "value"
+  ) |>
+  ggplot(aes(x = value, fill = variable)) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = "Sturges",
+    alpha = 0.6,
+    color = "black",
+    linewidth = 0.2
+  ) +
+  geom_density(
+    alpha = 0.7,
+    fill = "blue",
+    color = "darkblue",
+    linewidth = 1.2
+  ) +
+  theme_minimal() +
+  facet_wrap(~variable, scales = "free") +
+  labs(
+    title = "Histograms with Density Curves",
+    subtitle = "Mother's Age, Father's Age, Household Income, and Math Score",
+    x = "Value",
+    y = "Density"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, face = "italic"),
+    legend.position = "none",
+    strip.text = element_text(size = 12, face = "bold")
+  )
+```
+
+```{r}
+# Individual plots for better customization
+age_income_vars <- df |>
+  select(contains('age'), w3income, c5r2mtsc) |>
+  names()
+
+for (var in age_income_vars) {
+  print(
+    df |>
+      ggplot(aes(x = .data[[var]])) +
+      geom_histogram(
+        aes(y = after_stat(density)),
+        bins = 30,
+        fill = "steelblue",
+        alpha = 0.7,
+        color = "black"
+      ) +
+      geom_density(fill = "red", alpha = 0.5, linewidth = 1.2) +
+      theme_minimal() +
+      labs(title = paste("Distribution of", var), x = var, y = "Density") +
+      theme(plot.title = element_text(hjust = 0.5))
+  )
+}
+```
+
+The histograms now display both the frequency distribution (histogram bars) and the density curve overlaid on top. The density curve helps visualize the probability density function of the data, making it easier to see the shape of the distribution, identify modes, and understand the overall pattern of each variable.
+
+## Perform causal analysis
+
+The treatment ?been a catholic??
+```{r}
+library(MatchIt)
+
+df |>
+  group_by(catholic) |>
+  summarise(
+    n = n(),
+    mean = mean(c5r2mtsc_std, na.rm = TRUE),
+    sd = sd(c5r2mtsc_std),
+    se = sd / sqrt(n)
+  )
+```
+
+
+Pre-treatment covariates
+```{r}
+pre_treatment_covariates <- c(
+  'w3income',
+  'p5numpla',
+  'w3momed_hsb'
+)
+df %>%
+  group_by(catholic) %>%
+  summarise_at(vars(one_of(pre_treatment_covariates)), ~ mean(.x, na.rm = TRUE))
+```
+
+Logistic regression is the most common method used to estimate propensity scores, where the treatment assignment is regressed on observed baseline characteristics.
+
+This model is tailored to predict the likelihood of belonging to a specific group (in this case, catholic) based on several predictors, such as income (w3income), the number of places lived (p5numpla), and the mother's education level (w3momed_hsb).
+
+
+```{r}
+model_ps <- glm(
+  catholic ~ +w3income + p5numpla + w3momed_hsb,
+  family = binomial(),
+  data = df
+)
+```
+
+ Propensity scores, the outcome of this model, represent the probability of treatment assignment conditional on observed covariates. They are pivotal in balancing the distribution of covariates across treatment groups, allowing for a more unbiased estimation of treatment effects.
+
+ To explore and understand the distribution of these propensity scores, we visualize them using a histogram, distinguishing between the groups:
+
+
+ ```{r}
+df$pscore <- predict(
+  model_ps,
+  newdata = df,
+  type = "response"
+)
+ggplot(
+  df,
+  aes(
+    x = pscore,
+    fill = as.factor(catholic)
+  )
+) +
+  geom_histogram(alpha = 0.6, position = "identity", bins = 30) +
+  labs(x = "Propensity Score", y = "Frequency", fill = "Group") +
+  theme_minimal()
+ ```
+
+ After estimating the propensity scores, we proceed to match individuals from the treatment and control groups based on their propensity scores using nearest-neighbor matching. This method pairs individuals from the treatment group with similar individuals from the control group based on their propensity scores:
+
+
+ ```{r}
+# Remove rows with any NA values in the specified covariates
+data_cleaned <- df |>
+  filter(complete.cases(catholic, race_white, w3income, p5numpla, w3momed_hsb))
+
+# Further remove rows with non-finite values in numeric covariates
+numeric_covariates <- c("w3income", "p5numpla")
+data_cleaned <- data_cleaned |>
+  filter(
+    sapply(data_cleaned[numeric_covariates], is.finite) |>
+      rowSums() ==
+      length(numeric_covariates)
+  )
+
+# run matchit() on data_cleaned
+mod_match <- matchit(
+  catholic ~ w3income + p5numpla + w3momed_hsb,
+  method = "nearest",
+  data = data_cleaned
+) # or data_imputed
+```
+
+```{r}
+plot(mod_match, type = "jitter")
+plot(mod_match, type = "hist")
+```
+
+
+To quantitatively assess the balance of covariates, we compute the mean of each pre-treatment covariate for both groups in the matched sample:
+
+```{r}
+matched_data <- match.data(mod_match)
+matched_data |>
+  group_by(catholic) |>
+  summarise_at(vars(one_of(pre_treatment_covariates)), ~ mean(.x, na.rm = TRUE))
+```
+
+Next, we examine the standardized differences between groups for each covariate, assessing how well the matching process has aligned the covariates across treatment and control groups.
+
+To determine the treatment effect (here, the impact of being Catholic), we use a t-test and a linear regression on the matched data. These analyses measure the outcome differences between the two groups:
+
+```{r}
+with(matched_data, t.test(c5r2mtsc_std ~ catholic))
+# You can also use a linear model for a more detailed analysis
+lm_effect <- lm(c5r2mtsc_std ~ catholic, data = matched_data)
+summary(lm_effect)
+```
+
+
+## Understanding the `is.finite()` Function
+
+The `is.finite()` function is used in the data cleaning step to identify and remove rows containing non-finite (infinite or undefined) numeric values. Let me break down what this function does and why it's important:
+
+### What `is.finite()` Does:
+
+```{r}
+# Demonstrate what is.finite() does
+example_values <- c(1, 2, NA, Inf, -Inf, NaN)
+is.finite(example_values)
+```
+
+`is.finite()` returns `TRUE` for:
+- **Finite numbers**: Regular numeric values (e.g., 1, 2.5, -3.14)
+- **FALSE** for:
+  - `NA`: Missing values
+  - `Inf`: Positive infinity
+  - `-Inf`: Negative infinity  
+  - `NaN`: Not a Number (undefined results)
+
+### How It Works in Your Code:
+
+```{r}
+# Step-by-step explanation of the filtering logic
+numeric_covariates <- c("w3income", "p5numpla")
+
+# Show what sapply does with is.finite
+example_data <- tibble(
+  w3income = c(50000, 75000, Inf, 60000, NA),
+  p5numpla = c(1, 3, 2, Inf, 4)
+)
+
+cat("Original data:\n")
+print(example_data)
+
+cat("\nApplying is.finite() to each column:\n")
+finite_check <- sapply(example_data[numeric_covariates], is.finite)
+print(finite_check)
+
+cat("\nRow sums of finite checks:\n")
+row_sums <- rowSums(finite_check)
+print(row_sums)
+
+cat(
+  "\nExpected number of finite values per row:",
+  length(numeric_covariates),
+  "\n"
+)
+
+cat("\nFinal filter condition (rowSums == length(numeric_covariates)):\n")
+filter_condition <- row_sums == length(numeric_covariates)
+print(filter_condition)
+```
+
+### Why This Filtering is Important:
+
+1. **Removes Invalid Values**: Eliminates rows with `Inf`, `-Inf`, or `NaN` values that could break statistical calculations
+2. **Ensures Data Quality**: Guarantees that all numeric values are valid and usable in propensity score matching
+3. **Prevents Computational Errors**: Many statistical functions will fail or produce incorrect results with non-finite values
+4. **Creates Complete Cases**: Ensures that every row has valid, finite values for all specified covariates
+
+### Alternative Approaches:
+
+```{r}
+# Alternative ways to achieve the same result
+
+# Method 1: Using is.finite directly with across
+data_cleaned_alt1 <- data_cleaned |>
+  filter(
+    across(all_of(numeric_covariates), is.finite) |> rowSums() ==
+      length(numeric_covariates)
+  )
+
+# Method 2: Using complete.cases with finite values
+data_cleaned_alt2 <- data_cleaned |>
+  filter(
+    complete.cases(data_cleaned[numeric_covariates]) &
+      sapply(data_cleaned[numeric_covariates], is.finite) |> rowSums() ==
+        length(numeric_covariates)
+  )
+
+# Method 3: Check for specific problematic values
+data_cleaned_alt3 <- data_cleaned |>
+  filter(
+    !is.infinite(data_cleaned$w3income) &
+      !is.infinite(data_cleaned$p5numpla) &
+      !is.na(data_cleaned$w3income) &
+      !is.na(data_cleaned$p5numpla)
+  )
+```
+
+This data cleaning step is crucial for ensuring the quality and reliability of your propensity score matching analysis.
