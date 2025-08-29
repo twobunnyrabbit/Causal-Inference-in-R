@@ -1,0 +1,272 @@
+---
+title: "Bayesian Network Example"
+format: html
+self-contained: true
+---
+
+Of course! That formula is the **chain rule for Bayesian Networks**, and it's simpler than it looks.
+
+In plain English, the formula says:
+
+> The probability of any combination of events happening across all the variables in a system is the **product of the probabilities of each variable**, given the state of its **direct parents**.
+
+Let's break that down.
+
+-   $P(X\_1, ..., X\_n)$: This is the **joint probability** of all variables in your network. Think of it as the probability of a very specific scenario where every single variable has a certain value. For example, the probability of *'it's raining' AND 'the sprinkler is on' AND 'the grass is wet'*.
+-   $\\prod\_{i=1}^{n}$: This is just a fancy way of saying "multiply a bunch of things together."
+-   $P(X\_i | pa\_i)$: This is the core concept. It's the **conditional probability** of a single variable $X\_i$ given the values of its parents, $pa\_i$. The "parents" are the nodes in the network that have arrows pointing directly to $X\_i$. If a variable has no parents (it's a "root" node), its probability is just $P(X\_i)$.
+
+The formula is powerful because it simplifies a massive joint probability problem into a series of smaller, manageable local probability calculations.
+
+------------------------------------------------------------------------
+
+### A Concrete Example: The 'Asia' Dataset
+
+Let's make this real with a classic dataset in the `bnlearn` R package called `asia`. This is a small, hypothetical network about a patient visiting a doctor.
+
+The story is: "A patient has recently visited Asia. They are a smoker. The doctor is worried they might have tuberculosis or lung cancer, which could be indicated by a positive X-ray result or shortness of breath (dyspnoea)."
+
+The network structure looks like this:
+
+The dependencies (the parent-child relationships) are:
+
+-   **Tuberculosis** (`tub`) can be caused by a **Visit to Asia** (`asia`).
+-   **Lung Cancer** (`lung`) can be caused by **Smoking** (`smoke`).
+-   **Bronchitis** (`bronc`) can also be caused by **Smoking** (`smoke`).
+-   A positive **X-ray** (`xray`) can be caused by either **Tuberculosis** or **Lung Cancer**.
+-   **Dyspnoea** (shortness of breath, `dysp`) can be caused by either **Bronchitis** or a combination of **Tuberculosis** and **Lung Cancer** (this is represented by an intermediate node `either`).
+
+According to the formula, the joint probability of all these variables is:
+
+$P(\\text{asia, smoke, tub, lung, bronc, either, xray, dysp}) = P(\\text{asia}) \\times P(\\text{smoke}) \\times P(\\text{tub} | \\text{asia}) \\times P(\\text{lung} | \\text{smoke}) \\times P(\\text{bronc} | \\text{smoke}) \\times P(\\text{either} | \\text{tub, lung}) \\times P(\\text{xray} | \\text{either}) \\times P(\\text{dysp} | \\text{bronc, either})$
+
+Notice how each term in the multiplication is a variable's probability *given its parents*. `asia` and `smoke` have no parents, so they are just $P(\\text{asia})$ and $P(\\text{smoke})$.
+
+------------------------------------------------------------------------
+
+### R Code Example
+
+Let's use R to demonstrate this. We will define the network structure, "fit" it to the data (i.e., calculate all the $P(X\_i | pa\_i)$ tables), and then use the formula to calculate the probability of a specific scenario.
+
+First, make sure you have the `bnlearn` package installed.
+
+```{r}
+# install.packages("bnlearn")
+library(bnlearn)
+```
+
+#### 1. Load Data and Define the Network Structure
+
+The `asia` dataset comes with the package. We can define the known network structure.
+
+``` {r}
+# Load the dataset
+data(asia)
+
+new_names <- c("asia", "smoke", "tub", "lung", "bronc", "either", "xray", "dysp")
+names(asia) <- new_names
+
+# Define the Bayesian network structure (the "arrows")
+dag <- model2network("[asia][smoke][tub|asia][lung|smoke][bronc|smoke][either|tub:lung][xray|either][dysp|bronc:either]")
+# dag <- model2network("[A][S][T|A][L|S][B|S][E|T:L][X|E][D|B:E]")
+# Plot the network to visualize it
+# install.packages("Rgraphviz") # You might need this for plotting
+plot(dag)
+```
+
+#### 2. Fit the Parameters
+
+Now, we'll use the `bn.fit()` function to learn all the conditional probability tables (CPTs) from the data. This step is what calculates all the $P(X\_i | pa\_i)$ terms for us.
+
+``` {r}
+# Fit the CPTs to the data based on the defined structure
+fitted_model <- bn.fit(dag, data = asia)
+
+# Let's inspect a couple of the CPTs
+# P(tub | asia)
+print(fitted_model$tub)
+
+# P(lung | smoke)
+print(fitted_model$lung)
+```
+
+When you run `print(fitted_model$tub)`, you'll see a table like this, which is the learned probability $P(\\text{tub} | \\text{asia})$:
+
+```         
+  Parameters of node tub (multinomial distribution)
+
+Conditional probability table:
+        tub
+asia         yes        no
+  yes 0.05000000 0.9500000
+  no  0.01000000 0.9900000
+```
+
+This table tells us, for example, that the probability of having tuberculosis if you've visited Asia is 5% (`P(tub=yes | asia=yes) = 0.05`).
+
+#### 3. Use the Formula to Calculate a Joint Probability
+
+Let's calculate the probability of a specific scenario: **A patient who has NOT visited Asia, IS a smoker, and has lung cancer, but does NOT have tuberculosis.**
+
+$P(\\text{asia=no, smoke=yes, tub=no, lung=yes})$
+
+Using the chain rule, we only need the relevant parts of the network:
+
+$P(\\text{asia=no}) \\times P(\\text{smoke=yes}) \\times P(\\text{tub=no} | \\text{asia=no}) \\times P(\\text{lung=yes} | \\text{smoke=yes})$
+
+Now, we can pull these values directly from our `fitted_model` in R.
+
+``` {r}
+# P(asia=no)
+p_asia_no <- fitted_model$asia$prob["no"]
+
+# P(smoke=yes)
+p_smoke_yes <- fitted_model$smoke$prob["yes"]
+
+# P(tub=no | asia=no)
+# We access the CPT: column name "no", row name "no"
+p_tub_no_given_asia_no <- fitted_model$tub$prob["no", "no"]
+
+# P(lung=yes | smoke=yes)
+# We access the CPT: column name "yes", row name "yes"
+p_lung_yes_given_smoke_yes <- fitted_model$lung$prob["yes", "yes"]
+
+# Multiply them all together!
+joint_prob <- p_asia_no * p_smoke_yes * p_tub_no_given_asia_no * p_lung_yes_given_smoke_yes
+
+# Print the values and the final result
+cat("P(asia=no) =", p_asia_no, "\n")
+cat("P(smoke=yes) =", p_smoke_yes, "\n")
+cat("P(tub=no | asia=no) =", p_tub_no_given_asia_no, "\n")
+cat("P(lung=yes | smoke=yes) =", p_lung_yes_given_smoke_yes, "\n\n")
+
+cat("Final Joint Probability =", joint_prob, "\n")
+```
+
+The output will show the individual probabilities and the final calculated joint probability, demonstrating how the abstract formula is applied in practice. ✅
+
+## Conditional Independence
+
+Of course. This formula defines **conditional independence**.
+
+In plain English, the formula states:
+
+> Two variables, $X$ and $Y$, are **conditionally independent** given a third variable, $Z$, if knowing the outcome of $Z$ makes $X$ and $Y$ no longer have any influence on each other.
+
+Essentially, any relationship that appeared to exist between $X$ and $Y$ was only because they were both connected to $Z$. Once you know the value of $Z$, learning something new about $X$ tells you nothing new about $Y$, and vice-versa.
+
+  * **$P(X, Y | Z)$**: This is the joint probability of both $X$ and $Y$ happening, given that we already know $Z$ has happened.
+  * **$P(X | Z) P(Y | Z)$**: This is the product of the individual probabilities of $X$ happening and $Y$ happening, each given that we know $Z$.
+
+Normally, for two events to be independent, we would say $P(X, Y) = P(X)P(Y)$. The formula in the image is just the conditional version of this rule.
+
+-----
+
+### A Concrete Example: Firefighters and Burnt Houses
+
+Let's use an intuitive example.
+
+  * **X**: The number of **firefighters** sent to a location.
+  * **Y**: The amount of **damage** to a house.
+  * **Z**: The size of the **fire**.
+
+Ordinarily, if you just look at data for $X$ (firefighters) and $Y$ (damage), you'll find a strong correlation: where there are more firefighters, there is more damage. This might lead you to mistakenly think firefighters cause damage.
+
+However, they are **conditionally independent** given $Z$ (the size of the fire).
+
+Once we **know the size of the fire** (we condition on $Z$), the number of firefighters and the amount of damage become independent.
+
+  * If I tell you there was a **huge fire** ($Z=\\text{large}$), you already expect a lot of damage. Learning that 20 firefighters were sent ($X=20$) doesn't change your expectation of the damage ($Y$) much. The fire's size is the real explanatory factor.
+  * Similarly, if I tell you there was a **tiny kitchen fire** ($Z=\\text{small}$), you expect minor damage. Learning that only 2 firefighters were sent ($X=2$) doesn't add new information about the likely damage ($Y$).
+
+In this case, the fire is a **common cause** of both the number of firefighters and the amount of damage. Once this common cause is accounted for, the apparent relationship between firefighters and damage vanishes.
+
+-----
+
+### R Code Example
+
+Let's return to our `asia` dataset. In that network, **Tuberculosis** (`T`) and **Lung Cancer** (`L`) are initially independent; they are caused by different things (`A` for Asia and `S` for Smoker, respectively).
+
+However, they both can cause a positive **X-ray** (`X`). This means if we condition on the X-ray result, `T` and `L` suddenly become dependent. This is a classic "collider" or "explaining away" effect.
+
+Let's test for a different relationship: are **Tuberculosis (`T`)** and **Bronchitis (`B`)** conditionally independent given **Smoking (`S`)**? Looking at the graph, the path from `S` to `B` is direct, and the path from `S` to `T` is non-existent. They seem to be independent. Let's test this formally.
+
+The `bnlearn` package has a function `ci.test()` for exactly this purpose. It tests the null hypothesis that two variables are conditionally independent. If the p-value is high (e.g., \> 0.05), we fail to reject the null hypothesis, meaning the data is consistent with them being conditionally independent.
+
+#### 1\. Prepare the Data (with readable names)
+
+```{r}
+library(bnlearn)
+
+# Load the dataset
+data(asia)
+
+# Define and apply readable names
+new_names <- c("asia", "smoke", "tub", "lung", "bronc", "either", "xray", "dysp")
+names(asia) <- new_names
+```
+
+#### 2\. Test for Conditional Independence
+
+Now, let's test if **Tuberculosis (`tub`)** is independent of **Bronchitis (`bronc`)** given **Smoking (`smoke`)**. Our intuition says they should be, as smoking only causes bronchitis, not tuberculosis.
+
+```{r}
+# Test: Is tub independent of bronc, given smoke?
+test_result <- ci.test("tub", "bronc", "smoke", data = asia)
+
+# Print the results
+print(test_result)
+```
+
+---
+
+```{r}
+ci.test("asia", "bronc", "smoke", data = asia)
+```
+
+### Direct Interpretation
+
+The key is the **p-value**.
+* **p-value**: `0.01649`
+* **Significance Level**: The standard threshold is `0.05`.
+
+Since your p-value (`0.01649`) is **less than** the significance level (`0.05`), you **reject the null hypothesis**.
+
+* **Null Hypothesis ($H_0$)**: `tub` and `bronc` are conditionally independent given `smoke`.
+* **Alternative Hypothesis ($H_a$)**: `tub` and `bronc` are **not** conditionally independent (i.e., they are dependent) given `smoke`.
+
+**Conclusion**: The test found a statistically significant relationship between tuberculosis and bronchitis, even after accounting for a patient's smoking status. Learning a smoker's bronchitis status gives you a small amount of information about their tuberculosis status.
+
+---
+
+### Breakdown of the Output
+
+* **Mutual Information (disc.)**: This is the name of the statistical test used. It measures the "amount of information" obtained about one random variable by observing another. A value of zero means independence.
+* **data: tub ~ bronc | smoke**: This confirms the relationship being tested: `tub` vs. `bronc`, conditional on `smoke`.
+* **mi = 8.2106**: This is the calculated mutual information statistic from the data. Since this value is greater than zero, it suggests there is some level of dependence.
+* **p-value = 0.01649**: This is the probability of seeing a mutual information value of `8.2106` or higher *if the variables were truly independent*. Because this probability is so low (~1.6%), we conclude our initial assumption of independence is likely wrong.
+
+---
+
+### What This Means for Your Model
+
+This is a fantastic example of the difference between a theoretical model and real-world data analysis.
+
+1.  **Theoretical Model**: The Bayesian network graph (`[A]->[T]` and `[S]->[B]`) assumes that `tub` and `bronc` are perfectly independent once you know `smoke`.
+2.  **Data Analysis**: The `ci.test` on the `asia` dataset found a faint but statistically significant dependency that isn't represented in our simple model graph.
+
+This kind of result is common and is a core part of causal discovery. It tells you that while your assumed network structure is a very good approximation, the underlying data might contain more complex relationships or subtle correlations due to random chance in the sample. 🧐
+
+### Another way of explaining conditional indepedence
+Imagine you notice that whenever you wear your sunglasses, you also see lots of people eating ice cream. It seems like sunglasses and ice cream are connected! 🕶️🍦
+
+But then you figure out the **secret reason**: the **sun**!
+
+* The sun is bright, so you wear your sunglasses.
+* The sun is hot, so people eat ice cream to cool down.
+
+The sunglasses and the ice cream don't cause each other. They only seem related because the sun is the boss of both of them.
+
+
+
+So, **conditional independence** is just like that. If you already know it's a sunny day (that's the "condition"), then seeing someone with sunglasses doesn't make you think they must have ice cream. You already know the real reason for both. The sunglasses and the ice cream are independent, *on the condition that* you know it's sunny.

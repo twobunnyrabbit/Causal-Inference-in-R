@@ -1,10 +1,9 @@
-
-
 library(dagitty)
 library(lavaan)
-
+install.packages(c("dagitty", "lavaan"))
 # load the data set
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
+
 social_media_data = read.csv("./data/social_media_data.csv")
 
 
