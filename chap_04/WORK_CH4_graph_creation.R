@@ -1,10 +1,11 @@
 library(dagitty)
 library(lavaan)
-install.packages(c("dagitty", "lavaan"))
+library(here)
+# install.packages(c("dagitty", "lavaan"))
 # load the data set
 setwd(dirname(rstudioapi::getSourceEditorContext()$path))
 
-social_media_data = read.csv("./data/social_media_data.csv")
+social_media_data = read.csv(here("chap_04/data/social_media_data.csv"))
 
 
 
@@ -31,3 +32,6 @@ corr <- lavCor(social_media_data[vars_in_model])
 local_test_results <- localTests(graph, sample.cov = corr, sample.nobs = nrow(social_media_data))
 plotLocalTestResults(local_test_results)
 local_test_results
+
+social_media_data |> 
+  head()
